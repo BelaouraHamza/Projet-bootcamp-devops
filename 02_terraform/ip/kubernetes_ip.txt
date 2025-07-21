@@ -1,0 +1,1 @@
+Kubernetes installed on 35.180.169.250 
