@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: deployment
+metadata:
+  name: odoo-web-deployment
+  namespace: icgroup
+  labels:
+    env: prod
+    app: odoo-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      env: prod
+      app: odoo-web
+  template:
+    metadata:
+      labels:
+        env: prod
+        app: odoo-web
+    spec:
+      containers:
+        - name: odoo-web
+          image: odoo:17.0
+          ports:
+            - containerPort: 8069
+          env:
+            - name: USER
+              valueFrom:
+                configMapKeyRef:
+                  name: odoo-ConfigMap
+                  key: user
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: odoo-ConfigMap
+                  key: db_host
+            - name: ODOO_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: odoo-secret
+                  key: odoo-web-db-password
+            - name: ODOO_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: odoo-web-secret
+                  key: odoo-web-admin-password
+
+          volumeMounts:
+            - name: odoo-storage
+              mountPath: /var/lib/odoo
+            - name: odoo-storage-config
+              mountPath: /etc/odoo
+            - name: odoo-storage-addons
+              mountPath: /mnt/extra-addons
+      volumes:
+        - name: odoo-storage
+          persistentVolumeClaim:
+            claimName: odoo-pvc
+        - name: odoo-storage-config
+          hostPath:
+            path: /data-odoo/config
+        

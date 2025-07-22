@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odoo-web-config
+  namespace: icgroup
+  labels:
+    env: prod
+    app: odoo-web
+
+data:
+  user: "odoo"
+  db_host: postgres-svc
