@@ -1,16 +1,15 @@
 apiVersion: v1
 kind: Service
-metadata: 
+metadata:
   name: ic-webapp-svc
-  namespace: icgroup
   labels:
-    env: prod
-    app: ic-webapp-svc
+    env: prod 
+    app: ic-webapp
 spec:
-  ports:
-    - port: 8080
-      targetPort: 8080
-      nodePort: 30009
-  type: NodePort
   selector:
     app: ic-webapp
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30012
+  type: NodePort

@@ -27,10 +27,14 @@ variable "protocol" {
   type        = string
 }
 variable "stack" {
-  description = "The name of the stack"
   type        = string
-  
+  description = "Type d’instance à lancer (docker ou kubernetes)"
+  validation {
+    condition     = contains(["docker", "kubernetes"], var.stack)
+    error_message = "La variable 'stack' doit être 'docker' ou 'kubernetes'."
+  }
 }
+
 
 variable"region" {
   description = "The AWS region to deploy resources in"

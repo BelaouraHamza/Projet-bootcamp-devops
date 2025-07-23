@@ -1,2 +1,4 @@
 Kubernetes installed on 35.180.169.250 
 Kubernetes installed on 35.180.169.253 
+Kubernetes installed on 35.180.74.213 
+Kubernetes installed on 13.39.49.95 

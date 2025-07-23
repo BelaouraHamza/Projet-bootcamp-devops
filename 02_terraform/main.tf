@@ -13,6 +13,8 @@ locals {
   instance_name  = var.stack
 }
 
+
+
 module "keypair" {
   source           = "./modules/keypair"
   key_name         = var.stack
@@ -53,4 +55,19 @@ module "ec2_kubernetes" {
   private_key_path    = module.keypair.private_key_path
   private_key_content = module.keypair.private_key_content
   count               = var.stack == "kubernetes" ? 1 : 0
+}
+
+
+module "eip_ec2_docker" {
+  source          = "./modules/eip"
+  instance_id     = var.stack == "docker" ? module.ec2_docker[0].docker_instance_id : null
+  instance_name   = local.instance_name
+  count           = var.stack == "docker" ? 1 : 0
+}
+
+module "eip_ec2_kubernetes" {
+  source          = "./modules/eip"
+  instance_id     = var.stack == "kubernetes" ? module.ec2_kubernetes[0].kubernetes_instance_id : null
+  instance_name   = local.instance_name
+  count           = var.stack == "kubernetes" ? 1 : 0
 }
