@@ -1,6 +1,5 @@
 output "instance_id" {
-  value = aws_eip.eip.id
-  
+  value = aws_eip.eip.id 
 }
 
 output "instance_name" {

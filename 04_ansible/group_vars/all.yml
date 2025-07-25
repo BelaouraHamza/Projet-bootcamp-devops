@@ -1,0 +1,6 @@
+all:
+  chidren:
+    prod:
+      hosts:
+        k3s:
+ 
