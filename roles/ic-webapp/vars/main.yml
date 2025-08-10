@@ -1,6 +1,0 @@
----
-ic_webapp_system_user: "icwebapp"
-ic_webapp_system_group: "icwebapp"
-ic_webapp_config_dir: "/etc/ic-webapp"
-ic_webapp_log_dir: "/var/log/ic-webapp"
-ic_webapp_service_unit: "/etc/systemd/system/ic-webapp.service"

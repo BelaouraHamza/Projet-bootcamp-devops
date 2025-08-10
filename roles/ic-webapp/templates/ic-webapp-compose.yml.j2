@@ -1,9 +1,0 @@
-services:
-  ic-webapp:
-    container_name: ic-webapp
-    image: hamzablr/ic-webapp:{{ ic_webapp_version }}
-    ports:
-      - "{{ ic_webapp_port }}:8080"
-    environment:
-      - ODOO_URL={{ odoo_url }}
-      - PGADMIN_URL={{ pgadmin_url }}

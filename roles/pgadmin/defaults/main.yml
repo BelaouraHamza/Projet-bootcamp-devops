@@ -1,5 +1,0 @@
----
-# defaults file for pgadmin
-
-pgadmin_version: "latest"
-pgadmin_port: 80
