@@ -1,0 +1,16 @@
+#tasks file for pgadmin
+---
+- name: Copier le fichier docker-compose pour pgAdmin (inline)
+  ansible.builtin.template:
+    src: pgadmin-compose.yml.j2
+    dest: /home/ubuntu/pgadmin-compose.yml
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+
+- name: Lancer pgAdmin avec docker compose
+  ansible.builtin.command:
+    cmd: docker compose -f /home/ubuntu/pgadmin-compose.yml up -d
+  args:
+    chdir: /home/ubuntu
