@@ -5,5 +5,5 @@ services:
       - 8080:8080
     image: ic-webapp:1.0
     environment:
-      - "ODOO_URL=http://44.204.20.223:8069/"
-      - "PGADMIN_URL=http://44.204.20.223:80"
+      - "ODOO_URL=http://35.180.251.100:8069/"
+      - "PGADMIN_URL=http://35.180.251.100:80"
