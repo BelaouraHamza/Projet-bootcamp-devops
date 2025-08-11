@@ -12,7 +12,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        
+      - name: List files at workspace root
+        run: ls -l
+        
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -30,7 +33,7 @@ jobs:
 
       - name: Copy application files to EC2
         run: |
-          scp -r ./src ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
+          scp -r ./ ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
 
       - name: Run Ansible Playbook for deployment
         run: |
