@@ -38,6 +38,10 @@ jobs:
         run: |
           scp -r ./ ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
 
-      - name: Run Ansible Playbook for deployment
+      - name: List ansible-playbooks directory for debug
+        run: ls -R ansible-playbooks
+
+      - name: Run Ansible Playbook
         run: |
-          ansible-playbook ansible-playbooks/playbook/deploy-stack.yml -i ansible-playbooks/ansible-inventory.yml --limit ec2-cible
+         cd ansible-playbooks
+         ansible-playbook -i ansible-inventory.yml playbook/deploy-stack.yml
