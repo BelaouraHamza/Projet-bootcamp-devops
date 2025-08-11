@@ -1,11 +1,52 @@
 ---
-- hosts: all
+- name: Déployer l’application complète (Docker + Configuration)
+  hosts: all
   become: yes
+
   vars:
     ic_webapp_port: 8080
     ic_webapp_version: "1.0"
     odoo_url: "http://35.180.251.100:8069/"
     pgadmin_url: "http://35.180.251.100:80"
+
+  tasks:
+    - name: Installer Docker si nécessaire
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: S’assurer que Docker est démarré et activé
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Pull de la dernière image Docker depuis GHCR
+      docker_image:
+        name: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') }}/ic-webapp
+        tag: latest
+        source: pull
+
+    - name: Stopper et supprimer le container existant
+      docker_container:
+        name: monapp
+        state: absent
+        force_kill: yes
+      ignore_errors: yes
+
+    - name: Lancer le container Docker
+      docker_container:
+        name: monapp
+        image: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') }}/ic-webapp:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "8080:8080"
+        env:
+          ODOO_URL: "{{ odoo_url }}"
+          PGADMIN_URL: "{{ pgadmin_url }}"
+
   roles:
     - role: ic-webapp
     - role: odoo
