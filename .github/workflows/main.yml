@@ -64,7 +64,7 @@ jobs:
         run: ssh ubuntu@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/app"
 
       - name: Copy application files to EC2
-        run: scp -r ./dist/* ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
+        run: scp -r ./dist ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/app/
 
       - name: Run Ansible Playbook
         run: |
