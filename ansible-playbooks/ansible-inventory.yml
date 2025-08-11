@@ -3,7 +3,7 @@
     ec2-cible:
       ansible_host: 35.180.251.100
       ansible_user: ubuntu
-      ansible_ssh_private_key_file: ./docker.pem
+      ansible_ssh_private_key_file: ./ssh-key-docker.pem
   vars:
     ic_webapp_port: 8080
     ic_webapp_version: "1.0"
