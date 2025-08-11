@@ -1,0 +1,35 @@
+name: Deploy app on EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Run Ansible playbook
+        run: |
+          ansible-playbook ansible-playbooks/playbook/deploy-stack.yml -i ansible-playbooks/ansible-inventory.yml --limit ec2-cible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
