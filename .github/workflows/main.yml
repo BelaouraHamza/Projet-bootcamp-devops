@@ -34,6 +34,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
       - name: Install Ansible
         run: |
           sudo apt update
@@ -44,6 +51,6 @@ jobs:
           cd ansible-playbooks
           ansible-playbook playbook/deploy-full.yml \
             -i ansible-inventory.yml \
-            --private-key ~/.ssh/ssh-key-docker.pem
+            --private-key ~/.ssh/id_rsa
         env:
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
