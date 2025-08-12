@@ -40,11 +40,11 @@
       when: port_in_use.stdout != ""
       ignore_errors: yes
 
-- name: Lancer la stack avec Docker Compose V2 (avec suppression des orphelins)
-  community.docker.docker_compose_v2:
-    project_src: /home/ubuntu/
-    files:
-      - ic-webapp-compose.yml
-    state: present
-    remove_orphans: true
+    - name: Lancer la stack avec Docker Compose V2 (avec suppression des orphelins)
+      community.docker.docker_compose_v2:
+        project_src: /home/ubuntu/
+        files:
+          - ic-webapp-compose.yml
+        state: present
+        remove_orphans: true
 
