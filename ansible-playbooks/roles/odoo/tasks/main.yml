@@ -34,24 +34,24 @@
     owner: ubuntu
     group: ubuntu
     mode: '0644'
-    
-- name: Nettoyer cache Docker avant déploiement
-  become: yes
-  shell: docker system prune -af --volumes
-  args:
-    warn: false
 
-- name: Supprimer containers arrêtés Docker
+- name: Nettoyer Docker system (cache, images, volumes orphelins)
   become: yes
-  shell: docker container prune -f
-  args:
-    warn: false
+  shell: |
+    docker system prune -af
+    docker volume prune -f
 
-- name: Lancer la stack Odoo avec Docker Compose V2
-  ansible.builtin.command:
-    cmd: docker compose -f /home/ubuntu/odoo-compose.yml up -d
+- name: Redémarrer Docker
+  become: yes
+  systemd:
+    name: docker
+    state: restarted
+
+- name: Lancer la stack docker compose Odoo
+  command: docker compose -f /home/ubuntu/odoo-compose.yml up -d
   args:
     chdir: /home/ubuntu
+
 
 - name: Ouvrir le port 8069 dans le firewall
   ansible.builtin.ufw:
