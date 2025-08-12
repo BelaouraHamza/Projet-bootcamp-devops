@@ -48,7 +48,17 @@
     group: ubuntu
     mode: '0644'
 
-- name: Lancer la stack avec docker compose V2
-  command: docker compose -f /home/ubuntu/ic-webapp-compose.yml up -d
+- name: Stopper tous les containers orphelins bloquant les ports
+  shell: |
+    docker ps -q --filter "name=ic-webapp|pgadmin|ubuntu-odoo|ubuntu-db" | xargs -r docker stop
+  ignore_errors: yes
+
+- name: Supprimer tous les containers orphelins bloquant les ports
+  shell: |
+    docker ps -aq --filter "name=ic-webapp|pgadmin|ubuntu-odoo|ubuntu-db" | xargs -r docker rm -f
+  ignore_errors: yes
+
+- name: Lancer la stack avec docker compose V2 (avec suppression des orphelins)
+  command: docker compose -f /home/ubuntu/ic-webapp-compose.yml up -d --remove-orphans
   args:
     chdir: /home/ubuntu
