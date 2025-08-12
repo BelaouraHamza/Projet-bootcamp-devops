@@ -1,5 +1,4 @@
 ---
-# === Rôle Odoo optimisé ===
 
 - name: Créer le fichier Docker Compose pour Odoo
   ansible.builtin.copy:
@@ -35,6 +34,18 @@
     owner: ubuntu
     group: ubuntu
     mode: '0644'
+    
+- name: Nettoyer cache Docker avant déploiement
+  become: yes
+  shell: docker system prune -af --volumes
+  args:
+    warn: false
+
+- name: Supprimer containers arrêtés Docker
+  become: yes
+  shell: docker container prune -f
+  args:
+    warn: false
 
 - name: Lancer la stack Odoo avec Docker Compose V2
   ansible.builtin.command:
