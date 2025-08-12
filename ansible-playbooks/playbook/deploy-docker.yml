@@ -1,19 +1,15 @@
----
-- name: Déployer le conteneur Docker de l'application
+- name: Déployer l'application avec Docker Compose
   hosts: all
   become: yes
 
   vars:
     ic_webapp_port: 8080
-    odoo_url: "http://35.180.251.100:8069/"
-    pgadmin_url: "http://35.180.251.100:80"
+    compose_project_path: /home/ubuntu
+    compose_file_name: ic-webapp-compose.yml
     ghcr_username: "{{ lookup('env', 'GHCR_USERNAME') | lower }}"
     ghcr_token: "{{ lookup('env', 'GHCR_TOKEN') }}"
     ghcr_owner: "{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') | lower }}"
     image_name: "ghcr.io/{{ ghcr_owner }}/ic-webapp:latest"
-
-  roles:
-    - docker
 
   tasks:
     - name: Authentifier Docker auprès de GHCR
@@ -27,21 +23,27 @@
         name: "{{ image_name }}"
         source: pull
 
-    - name: Stopper et supprimer le conteneur existant
-      docker_container:
-        name: monapp
-        state: absent
-        force_kill: yes
+    - name: Vérifier si le port {{ ic_webapp_port }} est déjà utilisé par un conteneur
+      shell: |
+        docker ps --format '{{"{{"}}.ID{{"}}"}}: {{"{{"}}.Ports{{"}}"}}' | grep '0.0.0.0:{{ ic_webapp_port }}->'
+      register: port_in_use
+      failed_when: false
+      changed_when: false
+
+    - name: Stopper le conteneur qui utilise le port {{ ic_webapp_port }} (si trouvé)
+      shell: docker stop $(docker ps --format '{{"{{"}}.ID{{"}}"}}:{{"{{"}}.Ports{{"}}"}}' | grep '0.0.0.0:{{ ic_webapp_port }}->' | cut -d':' -f1)
+      when: port_in_use.stdout != ""
       ignore_errors: yes
 
-    - name: Lancer le conteneur Docker
-      docker_container:
-        name: monapp
-        image: "{{ image_name }}"
-        state: started
-        restart_policy: always
-        ports:
-          - "{{ ic_webapp_port }}:8080"
-        env:
-          ODOO_URL: "{{ odoo_url }}"
-          PGADMIN_URL: "{{ pgadmin_url }}"
+    - name: Supprimer le conteneur qui utilisait le port {{ ic_webapp_port }}
+      shell: docker rm $(docker ps -a --format '{{"{{"}}.ID{{"}}"}}:{{"{{"}}.Ports{{"}}"}}' | grep '0.0.0.0:{{ ic_webapp_port }}->' | cut -d':' -f1)
+      when: port_in_use.stdout != ""
+      ignore_errors: yes
+
+    - name: Lancer la stack avec Docker Compose (avec suppression des orphelins)
+      community.docker.docker_compose:
+        project_src: "{{ compose_project_path }}"
+        files:
+          - "{{ compose_file_name }}"
+        state: present
+        remove_orphans: true
