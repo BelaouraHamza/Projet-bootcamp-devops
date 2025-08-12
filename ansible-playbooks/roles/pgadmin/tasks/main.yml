@@ -9,8 +9,8 @@
     mode: '0644'
 
 
-- name: Lancer pgAdmin avec docker compose
-  ansible.builtin.command:
-    cmd: docker compose -f /home/ubuntu/pgadmin-compose.yml up -d
-  args:
-    chdir: /home/ubuntu
+#- name: Lancer pgAdmin avec docker compose
+#  ansible.builtin.command:
+#    cmd: docker compose -f /home/ubuntu/pgadmin-compose.yml up -d
+#  args:
+#    chdir: /home/ubuntu

@@ -1,46 +1,61 @@
 ---
-- name: Supprimer anciennes clés Docker (pour éviter conflit)
-  become: yes
-  file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - /etc/apt/trusted.gpg.d/docker.gpg
-    - /etc/apt/keyrings/docker.gpg
 
-- name: Créer le dossier keyrings
-  become: yes
-  file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: '0755'
+- name: Créer le fichier Docker Compose pour Odoo
+  ansible.builtin.copy:
+    dest: /home/ubuntu/odoo-compose.yml
+    content: |
+      version: "3.9"
+      services:
+        db:
+          image: postgres:15
+          environment:
+            POSTGRES_USER: odoo
+            POSTGRES_PASSWORD: odoo
+            POSTGRES_DB: odoo
+          volumes:
+            - odoo-db-data:/var/lib/postgresql/data
 
-- name: Télécharger la clé GPG Docker officielle dans keyrings
-  become: yes
-  get_url:
-    url: https://download.docker.com/linux/ubuntu/gpg
-    dest: /etc/apt/keyrings/docker.gpg
+        odoo:
+          image: odoo:16
+          depends_on:
+            - db
+          ports:
+            - "8069:8069"
+          volumes:
+            - odoo-data:/var/lib/odoo
+          environment:
+            HOST: db
+            USER: odoo
+            PASSWORD: odoo
+
+      volumes:
+        odoo-db-data:
+        odoo-data:
+    owner: ubuntu
+    group: ubuntu
     mode: '0644'
 
-- name: Ajouter le dépôt Docker stable avec signed-by sur clé Docker
+- name: Nettoyer Docker system (cache, images, volumes orphelins)
   become: yes
-  apt_repository:
-    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
-    state: present
-    filename: docker
+  shell: |
+    docker system prune -af
+    docker volume prune -f
 
-- name: Mettre à jour la liste des paquets APT
+- name: Redémarrer Docker
   become: yes
-  apt:
-    update_cache: yes
-    cache_valid_time: 3600
+  systemd:
+    name: docker
+    state: restarted
 
-- name: Installer Docker CE et dépendances
-  become: yes
-  apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-compose-plugin
-    state: present
+- name: Lancer la stack docker compose Odoo
+  command: docker compose -f /home/ubuntu/odoo-compose.yml up -d
+  args:
+    chdir: /home/ubuntu
+
+
+- name: Ouvrir le port 8069 dans le firewall
+  ansible.builtin.ufw:
+    rule: allow
+    port: 8069
+    proto: tcp
+  when: ansible_facts['distribution'] == "Ubuntu"
