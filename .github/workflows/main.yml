@@ -43,7 +43,7 @@ jobs:
         run: |
           cd ansible-playbooks
           ansible-playbook playbook/deploy-full.yml \
-            -i inventory.yml \
+            -i ansible-inventory.yml \
             --private-key ~/.ssh/ssh-key-docker.pem
         env:
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
