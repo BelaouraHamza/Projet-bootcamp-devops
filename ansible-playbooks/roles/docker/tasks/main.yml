@@ -1,42 +1,22 @@
 ---
-# Nettoyage complet des anciennes installations Docker
-- name: Supprimer tous les dépôts Docker restants
-  shell: |
-    rm -f /etc/apt/sources.list.d/*docker*
-    rm -f /etc/apt/sources.list.d/*Docker*
-  become: yes
-
-- name: Supprimer les lignes Docker du sources.list principal
-  lineinfile:
-    path: /etc/apt/sources.list
-    regexp: '^.*download\.docker\.com.*$'
+- name: Supprimer toute installation Docker APT existante (docker.io, containerd, runc)
+  apt:
+    name:
+      - docker.io
+      - containerd
+      - runc
     state: absent
+    purge: yes
   become: yes
 
-- name: Supprimer toutes les anciennes clés Docker
-  file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - /etc/apt/trusted.gpg.d/docker.gpg
-    - /etc/apt/keyrings/docker.gpg
-  become: yes
-
-- name: Vider le cache et forcer mise à jour des paquets
+- name: Nettoyer les paquets cassés et dépendances inutiles
   shell: |
     apt-get clean
-    apt-get update || true
+    apt-get autoremove -y
+    apt-get -f install -y
   become: yes
 
-# Installation Docker
-- name: Créer le dossier keyrings si absent
-  file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Installer les prérequis pour Docker
+- name: Installer dépendances pour dépôt Docker
   apt:
     name:
       - ca-certificates
@@ -47,22 +27,23 @@
     update_cache: yes
   become: yes
 
-- name: Ajouter la clé GPG officielle Docker
+- name: Ajouter clé GPG Docker
   shell: |
+    mkdir -p /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
   args:
     creates: /etc/apt/keyrings/docker.gpg
   become: yes
 
-- name: Ajouter le dépôt Docker stable
+- name: Ajouter dépôt Docker officiel
   apt_repository:
     repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
-    state: present
     filename: docker
+    state: present
   become: yes
 
-- name: Installer Docker Engine et docker-compose-plugin
+- name: Installer docker-ce et containerd depuis dépôt officiel
   apt:
     name:
       - docker-ce
@@ -72,13 +53,3 @@
     state: present
     update_cache: yes
   become: yes
-
-- name: Vérifier la version de Docker
-  command: docker --version
-  register: docker_version
-  changed_when: false
-
-- name: Vérifier la version de docker compose
-  command: docker compose version
-  register: docker_compose_version
-  changed_when: false
