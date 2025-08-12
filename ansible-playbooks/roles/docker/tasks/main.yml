@@ -1,42 +1,65 @@
 ---
-- name: Installer les paquets prérequis
-  apt:
-    name:
-      - apt-transport-https
-      - ca-certificates
-      - curl
-      - gnupg
-      - lsb-release
+- name: Supprimer toutes les sources Docker existantes conflictuelles
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_fileglob:
+    - /etc/apt/sources.list.d/docker*
+  become: yes
+
+- name: Supprimer les anciennes clés Docker
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/trusted.gpg.d/docker.gpg
+    - /etc/apt/keyrings/docker.gpg
+  become: yes
+
+- name: Supprimer le dossier des keyrings Docker (si présent)
+  file:
+    path: /etc/apt/keyrings
+    state: absent
+  become: yes
+
+- name: Recréer le dossier keyrings
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Télécharger la clé GPG Docker officielle
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.gpg
+    mode: '0644'
+  become: yes
+
+- name: Ajouter le dépôt Docker officiel avec signed-by
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu focal stable"
+    filename: docker
     state: present
-    update_cache: yes
-
-- name: Ajouter la clé GPG officielle Docker
-  ansible.builtin.shell: |
-    mkdir -p /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-  args:
-    creates: /etc/apt/keyrings/docker.gpg
-
-- name: Ajouter le dépôt Docker stable
-  ansible.builtin.copy:
-    dest: /etc/apt/sources.list.d/docker.list
-    content: |
-      deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+  become: yes
 
 - name: Mettre à jour la liste des paquets apt
-  apt:
+  ansible.builtin.apt:
     update_cache: yes
+  become: yes
 
 - name: Installer Docker CE, CLI et containerd
-  apt:
+  ansible.builtin.apt:
     name:
       - docker-ce
       - docker-ce-cli
       - containerd.io
     state: present
+  become: yes
 
-- name: S'assurer que le service Docker est démarré et activé
-  service:
+- name: S’assurer que Docker est démarré et activé
+  ansible.builtin.service:
     name: docker
     state: started
     enabled: yes
+  become: yes

@@ -1,54 +1,9 @@
----
-- name: Supprimer les anciennes sources Docker conflictuelles
-  file:
-    path: /etc/apt/sources.list.d/docker.list
-    state: absent
-  become: yes
-
-- name: Supprimer l'ancien fichier de clés Docker (s'il existe)
-  file:
-    path: /etc/apt/trusted.gpg.d/docker.gpg
-    state: absent
-  become: yes
-
-- name: Créer le dossier pour les keyrings
-  file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: '0755'
-  become: yes
-
-- name: Télécharger la clé GPG officielle de Docker
-  ansible.builtin.get_url:
-    url: https://download.docker.com/linux/ubuntu/gpg
-    dest: /etc/apt/keyrings/docker.gpg
-    mode: '0644'
-  become: yes
-
-- name: Ajouter le dépôt Docker officiel avec option signed-by
-  ansible.builtin.apt_repository:
-    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu focal stable"
-    filename: docker.list
-    state: present
-  become: yes
-
-- name: Mettre à jour la liste des paquets apt
-  ansible.builtin.apt:
-    update_cache: yes
-  become: yes
-
-- name: Installer Docker CE, CLI et containerd
-  ansible.builtin.apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-    state: present
-  become: yes
-
-- name: S’assurer que Docker est démarré et activé
-  ansible.builtin.service:
-    name: docker
-    state: started
-    enabled: yes
-  become: yes
+services:
+  ic-webapp:
+    container_name: ic-webapp
+    ports: 
+      - 8080:8080
+    image: ic-webapp:1.0
+    environment:
+      - "ODOO_URL=http://35.180.251.100:8069/"
+      - "PGADMIN_URL=http://35.180.251.100:80"
