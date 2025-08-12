@@ -6,6 +6,8 @@
     ic_webapp_port: 8080
     odoo_url: "http://35.180.251.100:8069/"
     pgadmin_url: "http://35.180.251.100:80"
+    ghcr_username: "{{ lookup('env', 'GHCR_USERNAME') | lower }}"
+    ghcr_token: "{{ lookup('env', 'GHCR_TOKEN') }}"
 
   roles:
     - docker

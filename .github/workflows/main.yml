@@ -47,10 +47,12 @@ jobs:
           sudo apt install -y ansible
 
       - name: Run deploy-full.yml
+        env:
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
           cd ansible-playbooks
           ansible-playbook playbook/deploy-full.yml \
             -i ansible-inventory.yml \
             --private-key ~/.ssh/id_rsa
-        env:
-          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
