@@ -7,6 +7,13 @@
     - /etc/apt/sources.list.d/docker*
   become: yes
 
+- name: Supprimer les lignes Docker dans /etc/apt/sources.list
+  lineinfile:
+    path: /etc/apt/sources.list
+    regexp: '^deb .*download.docker.com'
+    state: absent
+  become: yes
+
 - name: Supprimer les anciennes clés Docker
   file:
     path: "{{ item }}"
@@ -42,6 +49,15 @@
     filename: docker
     state: present
   become: yes
+
+- name: Vérifier le contenu du fichier docker.list
+  ansible.builtin.shell: cat /etc/apt/sources.list.d/docker.list
+  register: docker_repo
+  changed_when: false
+
+- name: Afficher le dépôt Docker configuré
+  ansible.builtin.debug:
+    var: docker_repo.stdout
 
 - name: Mettre à jour la liste des paquets apt
   ansible.builtin.apt:
