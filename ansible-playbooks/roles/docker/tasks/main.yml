@@ -1,16 +1,11 @@
 ---
-# ===================================================================
-# Rôle Docker - Installation Docker
-# ===================================================================
-
-# 1. Nettoyage complet des anciennes configurations
-- name: Supprimer toutes les entrées Docker dans /etc/apt/sources.list.d/
-  file:
-    path: "{{ item }}"
-    state: absent
-  with_fileglob:
-    - /etc/apt/sources.list.d/*docker*
-    - /etc/apt/sources.list.d/*Docker*
+# Nettoyage complet des anciennes installations Docker
+- name: Supprimer tous les dépôts Docker restants
+  shell: |
+    rm -f /etc/apt/sources.list.d/*docker*
+    rm -f /etc/apt/sources.list.d/*Docker*
+  args:
+    warn: false
   become: yes
 
 - name: Supprimer les lignes Docker du sources.list principal
@@ -29,11 +24,13 @@
     - /etc/apt/keyrings/docker.gpg
   become: yes
 
-- name: Vider le cache APT après nettoyage
-  command: apt-get clean
+- name: Vider le cache et forcer mise à jour des paquets
+  shell: |
+    apt-get clean
+    apt-get update || true
   become: yes
 
-# 2. Création du dossier keyrings
+# Installation Docker
 - name: Créer le dossier keyrings si absent
   file:
     path: /etc/apt/keyrings
@@ -41,7 +38,6 @@
     mode: '0755'
   become: yes
 
-# 3. Installation des prérequis
 - name: Installer les prérequis pour Docker
   apt:
     name:
@@ -53,25 +49,21 @@
     update_cache: yes
   become: yes
 
-# 4. Ajout de la clé GPG officielle Docker
 - name: Ajouter la clé GPG officielle Docker
-  ansible.builtin.shell: |
+  shell: |
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
   args:
     creates: /etc/apt/keyrings/docker.gpg
   become: yes
 
-# 5. Ajout du dépôt Docker officiel
 - name: Ajouter le dépôt Docker stable
   apt_repository:
     repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
     state: present
     filename: docker
-    update_cache: yes
   become: yes
 
-# 6. Installation de Docker et docker-compose-plugin
 - name: Installer Docker Engine et docker-compose-plugin
   apt:
     name:
@@ -83,7 +75,6 @@
     update_cache: yes
   become: yes
 
-# 7. Vérification des versions
 - name: Vérifier la version de Docker
   command: docker --version
   register: docker_version
