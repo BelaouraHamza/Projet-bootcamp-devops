@@ -1,52 +1,90 @@
 ---
-- name: Installer dépendances pour Docker
-  apt:
-    name:
-      - apt-transport-https
-      - ca-certificates
-      - curl
-      - gnupg
-      - lsb-release
-    state: present
-    update_cache: yes
+- name: Déployer le conteneur Docker de l'application
+  hosts: all
+  become: yes
 
-- name: Créer le dossier pour les clés GPG
-  file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: '0755'
+  vars:
+    ic_webapp_port: 8080
+    odoo_url: "http://35.180.251.100:8069/"
+    pgadmin_url: "http://35.180.251.100:80"
+    ghcr_username: "{{ lookup('env', 'GHCR_USERNAME') | lower }}"
+    ghcr_token: "{{ lookup('env', 'GHCR_TOKEN') }}"
+    ghcr_owner: "{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') | lower }}"
+    image_name: "ghcr.io/{{ ghcr_owner }}/ic-webapp:latest"
 
-- name: Ajouter la clé GPG officielle Docker
-  get_url:
-    url: https://download.docker.com/linux/ubuntu/gpg
-    dest: /etc/apt/keyrings/docker.gpg
-    mode: '0644'
+  tasks:
+    - name: Installer prérequis apt
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
 
-- name: Convertir la clé en format gpg
-  shell: gpg --dearmor < /etc/apt/keyrings/docker.gpg > /etc/apt/keyrings/docker.gpg.tmp && mv /etc/apt/keyrings/docker.gpg.tmp /etc/apt/keyrings/docker.gpg
-  args:
-    creates: /etc/apt/keyrings/docker.gpg
+    - name: Ajouter la clé GPG officielle de Docker
+      ansible.builtin.shell: |
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        chmod a+r /etc/apt/keyrings/docker.gpg
+      args:
+        creates: /etc/apt/keyrings/docker.gpg
 
-- name: Ajouter le dépôt officiel Docker
-  copy:
-    dest: /etc/apt/sources.list.d/docker.list
-    content: |
-      deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
-    mode: '0644'
+    - name: Ajouter le dépôt Docker officiel
+      copy:
+        dest: /etc/apt/sources.list.d/docker.list
+        content: |
+          deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
 
-- name: Installer Docker Engine et Compose V2
-  apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
-    state: present
-    update_cache: yes
+    - name: Installer Docker CE et Docker Compose V2
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
 
-- name: S'assurer que Docker est démarré et activé
-  service:
-    name: docker
-    state: started
-    enabled: true
+    - name: S'assurer que Docker est démarré et activé
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Authentifier Docker auprès de GHCR
+      community.docker.docker_login:
+        registry_url: ghcr.io
+        username: "{{ ghcr_username }}"
+        password: "{{ ghcr_token }}"
+
+    - name: Pull de la dernière image Docker depuis GHCR
+      community.docker.docker_image:
+        name: "{{ image_name }}"
+        source: pull
+
+    - name: Vérifier si le container "monapp" existe
+      shell: docker ps -aq --filter "name=monapp"
+      register: monapp_container_id
+      changed_when: false
+
+    - name: Stopper et supprimer l'ancien container
+      community.docker.docker_container:
+        name: monapp
+        state: absent
+      when: monapp_container_id.stdout != ""
+
+    - name: Lancer le nouveau conteneur Docker
+      community.docker.docker_container:
+        name: monapp
+        image: "{{ image_name }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ ic_webapp_port }}:8080"
+        env:
+          ODOO_URL: "{{ odoo_url }}"
+          PGADMIN_URL: "{{ pgadmin_url }}"
