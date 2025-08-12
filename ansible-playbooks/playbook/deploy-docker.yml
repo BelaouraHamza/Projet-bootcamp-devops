@@ -2,21 +2,29 @@
 - name: Déployer le conteneur Docker de l'application
   hosts: all
   become: yes
+
   vars:
     ic_webapp_port: 8080
     odoo_url: "http://35.180.251.100:8069/"
     pgadmin_url: "http://35.180.251.100:80"
     ghcr_username: "{{ lookup('env', 'GHCR_USERNAME') | lower }}"
     ghcr_token: "{{ lookup('env', 'GHCR_TOKEN') }}"
+    ghcr_owner: "{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') | lower }}"
+    image_name: "ghcr.io/{{ ghcr_owner }}/ic-webapp:latest"
 
   roles:
     - docker
 
   tasks:
+    - name: Authentifier Docker auprès de GHCR
+      community.docker.docker_login:
+        registry_url: ghcr.io
+        username: "{{ ghcr_username }}"
+        password: "{{ ghcr_token }}"
+
     - name: Pull de la dernière image Docker depuis GHCR
       docker_image:
-        name: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') | lower}}/ic-webapp
-        tag: latest
+        name: "{{ image_name }}"
         source: pull
 
     - name: Stopper et supprimer le conteneur existant
@@ -29,7 +37,7 @@
     - name: Lancer le conteneur Docker
       docker_container:
         name: monapp
-        image: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') }}/ic-webapp:latest
+        image: "{{ image_name }}"
         state: started
         restart_policy: always
         ports:

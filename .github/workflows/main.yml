@@ -9,9 +9,16 @@ jobs:
   # ==== CI: Build & Push Docker Image ====
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      image_owner: ${{ steps.set-owner.outputs.owner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set lowercase image owner
+        id: set-owner
+        run: |
+          echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Log in to GHCR
         uses: docker/login-action@v2
@@ -22,9 +29,8 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          docker build -t ghcr.io/$owner/ic-webapp:latest ./webapp-builder
-          docker push ghcr.io/$owner/ic-webapp:latest
+          docker build -t ghcr.io/${{ steps.set-owner.outputs.owner }}/ic-webapp:latest ./webapp-builder
+          docker push ghcr.io/${{ steps.set-owner.outputs.owner }}/ic-webapp:latest
 
   # ==== CD: Deploy via Ansible ====
   deploy:
@@ -41,14 +47,15 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Install Ansible
+      - name: Install Ansible and dependencies
         run: |
           sudo apt update
           sudo apt install -y ansible
+          ansible-galaxy collection install community.docker
 
       - name: Run deploy-full.yml
         env:
-          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          GITHUB_REPOSITORY_OWNER: ${{ needs.build-and-push.outputs.image_owner }}
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
