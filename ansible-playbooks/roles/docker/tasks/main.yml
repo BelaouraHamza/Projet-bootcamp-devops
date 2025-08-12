@@ -1,6 +1,10 @@
 ---
-# Nettoyage complet avant installation
-- name: Supprimer tous les dépôts Docker (sources.list.d)
+# ===================================================================
+# Rôle Docker - Installation Docker
+# ===================================================================
+
+# 1. Nettoyage complet des anciennes configurations
+- name: Supprimer toutes les entrées Docker dans /etc/apt/sources.list.d/
   file:
     path: "{{ item }}"
     state: absent
@@ -9,14 +13,14 @@
     - /etc/apt/sources.list.d/*Docker*
   become: yes
 
-- name: Purger les lignes Docker dans /etc/apt/sources.list
+- name: Supprimer les lignes Docker du sources.list principal
   lineinfile:
     path: /etc/apt/sources.list
     regexp: '^.*download\.docker\.com.*$'
     state: absent
   become: yes
 
-- name: Supprimer les anciennes clés Docker
+- name: Supprimer toutes les anciennes clés Docker
   file:
     path: "{{ item }}"
     state: absent
@@ -25,7 +29,11 @@
     - /etc/apt/keyrings/docker.gpg
   become: yes
 
-# Installation Docker officielle
+- name: Vider le cache APT après nettoyage
+  command: apt-get clean
+  become: yes
+
+# 2. Création du dossier keyrings
 - name: Créer le dossier keyrings si absent
   file:
     path: /etc/apt/keyrings
@@ -33,6 +41,7 @@
     mode: '0755'
   become: yes
 
+# 3. Installation des prérequis
 - name: Installer les prérequis pour Docker
   apt:
     name:
@@ -44,19 +53,16 @@
     update_cache: yes
   become: yes
 
+# 4. Ajout de la clé GPG officielle Docker
 - name: Ajouter la clé GPG officielle Docker
-  ansible.builtin.command:
-    cmd: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  ansible.builtin.shell: |
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
   args:
     creates: /etc/apt/keyrings/docker.gpg
   become: yes
 
-- name: Définir les permissions de la clé Docker
-  file:
-    path: /etc/apt/keyrings/docker.gpg
-    mode: '0644'
-  become: yes
-
+# 5. Ajout du dépôt Docker officiel
 - name: Ajouter le dépôt Docker stable
   apt_repository:
     repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
@@ -65,24 +71,25 @@
     update_cache: yes
   become: yes
 
-- name: Installer Docker Engine et plugins
+# 6. Installation de Docker et docker-compose-plugin
+- name: Installer Docker Engine et docker-compose-plugin
   apt:
     name:
       - docker-ce
       - docker-ce-cli
       - containerd.io
-      - docker-buildx-plugin
       - docker-compose-plugin
     state: present
     update_cache: yes
   become: yes
 
-# Vérifications
+# 7. Vérification des versions
 - name: Vérifier la version de Docker
   command: docker --version
   register: docker_version
   changed_when: false
 
-- name: Afficher la version de Docker
-  debug:
-    var: docker_version.stdout
+- name: Vérifier la version de docker compose
+  command: docker compose version
+  register: docker_compose_version
+  changed_when: false
