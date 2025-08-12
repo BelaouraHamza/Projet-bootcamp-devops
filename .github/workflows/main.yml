@@ -41,8 +41,8 @@ jobs:
 
       - name: Run deploy-full.yml
         run: |
-          ansible-playbook ansible-playbooks/deploy-full.yml \
-            -i ansible-playbooks/inventory.ini \
-            --private-key ~/.ssh/id_rsa
+          ansible-playbook ansible-playbooks/playbook/deploy-full.yml \
+            -i ansible-playbooks/inventory.yml \
+            --private-key ~/.ssh/ssh-key-docker.pem
         env:
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
