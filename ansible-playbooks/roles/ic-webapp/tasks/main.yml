@@ -1,64 +1,48 @@
 ---
-- name: Installer les prérequis pour Docker
-  apt:
-    name:
-      - ca-certificates
-      - curl
-      - gnupg
-      - lsb-release
-    state: present
-    update_cache: yes
+- name: Supprimer anciennes sources Docker potentiellement conflictuelles
+  file:
+    path: "/etc/apt/sources.list.d/docker.list"
+    state: absent
+  become: yes
 
-- name: Ajouter la clé GPG officielle Docker
-  apt_key:
+- name: Créer dossier pour keyrings si absent
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Télécharger la clé GPG officielle Docker
+  ansible.builtin.get_url:
     url: https://download.docker.com/linux/ubuntu/gpg
-    state: present
+    dest: /etc/apt/keyrings/docker.gpg
+    mode: '0644'
+  become: yes
 
-- name: Ajouter le dépôt Docker stable
-  apt_repository:
-    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+- name: Ajouter le dépôt Docker officiel avec signed-by
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu focal stable"
     state: present
+  become: yes
+
+- name: Mettre à jour la liste des paquets apt
+  ansible.builtin.apt:
     update_cache: yes
+  become: yes
 
-- name: Installer Docker Engine et docker-compose-plugin
+- name: Installer Docker et containerd
   apt:
     name:
       - docker-ce
       - docker-ce-cli
       - containerd.io
-      - docker-compose-plugin
     state: present
-    update_cache: yes
+    update_cache: no
+  become: yes
 
-- name: Vérifier la version de Docker
-  command: docker --version
-  register: docker_version
-  changed_when: false
-
-- name: Vérifier la version de docker compose
-  command: docker compose version
-  register: docker_compose_version
-  changed_when: false
-
-- name: Copier le fichier docker-compose template
-  template:
-    src: ic-webapp-compose.yml.j2
-    dest: /home/ubuntu/ic-webapp-compose.yml
-    owner: ubuntu
-    group: ubuntu
-    mode: '0644'
-
-- name: Stopper tous les containers orphelins bloquant les ports
-  shell: |
-    docker ps -q --filter "name=ic-webapp|pgadmin|ubuntu-odoo|ubuntu-db" | xargs -r docker stop
-  ignore_errors: yes
-
-- name: Supprimer tous les containers orphelins bloquant les ports
-  shell: |
-    docker ps -aq --filter "name=ic-webapp|pgadmin|ubuntu-odoo|ubuntu-db" | xargs -r docker rm -f
-  ignore_errors: yes
-
-- name: Lancer la stack avec docker compose V2 (avec suppression des orphelins)
-  command: docker compose -f /home/ubuntu/ic-webapp-compose.yml up -d --remove-orphans
-  args:
-    chdir: /home/ubuntu
+- name: S’assurer que Docker est démarré et activé
+  service:
+    name: docker
+    state: started
+    enabled: yes
+  become: yes
