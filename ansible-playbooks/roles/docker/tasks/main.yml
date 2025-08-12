@@ -4,8 +4,6 @@
   shell: |
     rm -f /etc/apt/sources.list.d/*docker*
     rm -f /etc/apt/sources.list.d/*Docker*
-  args:
-    warn: false
   become: yes
 
 - name: Supprimer les lignes Docker du sources.list principal
