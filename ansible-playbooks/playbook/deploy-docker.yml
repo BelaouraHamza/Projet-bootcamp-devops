@@ -1,50 +1,7 @@
-- name: Déployer l'application avec Docker Compose
+---
+- name: Installer Docker CE proprement sur les serveurs
   hosts: all
   become: yes
 
-  vars:
-    ic_webapp_port: 8080
-    compose_project_path: /home/ubuntu
-    compose_file_name: ic-webapp-compose.yml
-    ghcr_username: "{{ lookup('env', 'GHCR_USERNAME') | lower }}"
-    ghcr_token: "{{ lookup('env', 'GHCR_TOKEN') }}"
-    ghcr_owner: "{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') | lower }}"
-    image_name: "ghcr.io/{{ ghcr_owner }}/ic-webapp:latest"
-
-  tasks:
-    - name: Authentifier Docker auprès de GHCR
-      community.docker.docker_login:
-        registry_url: ghcr.io
-        username: "{{ ghcr_username }}"
-        password: "{{ ghcr_token }}"
-
-    - name: Pull de la dernière image Docker depuis GHCR
-      docker_image:
-        name: "{{ image_name }}"
-        source: pull
-
-    - name: Vérifier si le port {{ ic_webapp_port }} est déjà utilisé par un conteneur
-      shell: |
-        docker ps --format '{{"{{"}}.ID{{"}}"}}: {{"{{"}}.Ports{{"}}"}}' | grep '0.0.0.0:{{ ic_webapp_port }}->'
-      register: port_in_use
-      failed_when: false
-      changed_when: false
-
-    - name: Stopper le conteneur qui utilise le port {{ ic_webapp_port }} (si trouvé)
-      shell: docker stop $(docker ps --format '{{"{{"}}.ID{{"}}"}}:{{"{{"}}.Ports{{"}}"}}' | grep '0.0.0.0:{{ ic_webapp_port }}->' | cut -d':' -f1)
-      when: port_in_use.stdout != ""
-      ignore_errors: yes
-
-    - name: Supprimer le conteneur qui utilisait le port {{ ic_webapp_port }}
-      shell: docker rm $(docker ps -a --format '{{"{{"}}.ID{{"}}"}}:{{"{{"}}.Ports{{"}}"}}' | grep '0.0.0.0:{{ ic_webapp_port }}->' | cut -d':' -f1)
-      when: port_in_use.stdout != ""
-      ignore_errors: yes
-
-    - name: Lancer la stack avec Docker Compose V2 (avec suppression des orphelins)
-      community.docker.docker_compose_v2:
-        project_src: /home/ubuntu/
-        files:
-          - ic-webapp-compose.yml
-        state: present
-        remove_orphans: true
-
+  roles:
+    - docker
