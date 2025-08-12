@@ -1,5 +1,5 @@
 ---
-- name: Installer les dépendances pour Docker
+- name: Installer dépendances pour Docker
   apt:
     name:
       - apt-transport-https
@@ -10,21 +10,29 @@
     state: present
     update_cache: yes
 
+- name: Créer le dossier pour les clés GPG
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
 - name: Ajouter la clé GPG officielle Docker
-  ansible.builtin.shell: |
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.gpg
+    mode: '0644'
+
+- name: Convertir la clé en format gpg
+  shell: gpg --dearmor < /etc/apt/keyrings/docker.gpg > /etc/apt/keyrings/docker.gpg.tmp && mv /etc/apt/keyrings/docker.gpg.tmp /etc/apt/keyrings/docker.gpg
   args:
     creates: /etc/apt/keyrings/docker.gpg
 
 - name: Ajouter le dépôt officiel Docker
-  ansible.builtin.shell: |
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-      $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-  args:
-    creates: /etc/apt/sources.list.d/docker.list
+  copy:
+    dest: /etc/apt/sources.list.d/docker.list
+    content: |
+      deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+    mode: '0644'
 
 - name: Installer Docker Engine et Compose V2
   apt:
@@ -41,38 +49,4 @@
   service:
     name: docker
     state: started
-    enabled: yes
-
-- name: Vérifier si le port 8080 est occupé
-  shell: "ss -tulpn | grep ':8080 ' || true"
-  register: port_8080_check
-  changed_when: false
-
-- name: Stopper le conteneur qui occupe le port 8080 (si trouvé)
-  shell: |
-    cid=$(docker ps --filter "publish=8080" --format "{{'{{'}}.ID{{'}}'}}")
-    if [ -n "$cid" ]; then docker stop "$cid" && docker rm "$cid"; fi
-  when: port_8080_check.stdout != ""
-
-- name: Authentifier Docker auprès de GHCR
-  community.docker.docker_login:
-    registry_url: ghcr.io
-    username: "{{ ghcr_username }}"
-    password: "{{ ghcr_token }}"
-
-- name: Pull de la dernière image Docker depuis GHCR
-  community.docker.docker_image:
-    name: "{{ image_name }}"
-    source: pull
-
-- name: Lancer le conteneur de l'application
-  community.docker.docker_container:
-    name: monapp
-    image: "{{ image_name }}"
-    state: started
-    restart_policy: always
-    ports:
-      - "{{ ic_webapp_port }}:8080"
-    env:
-      ODOO_URL: "{{ odoo_url }}"
-      PGADMIN_URL: "{{ pgadmin_url }}"
+    enabled: true
