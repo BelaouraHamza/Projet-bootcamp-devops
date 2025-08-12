@@ -1,10 +1,9 @@
 ---
+# Nettoyage complet avant installation
 - name: Supprimer toutes les sources Docker conflictuelles
-  file:
-    path: "{{ item }}"
-    state: absent
-  with_fileglob:
-    - /etc/apt/sources.list.d/docker*
+  shell: |
+    rm -f /etc/apt/sources.list.d/*docker*
+    rm -f /etc/apt/sources.list.d/*Docker*
   become: yes
 
 - name: Supprimer les anciennes clés Docker
@@ -22,6 +21,14 @@
     state: absent
   become: yes
 
+- name: Nettoyer le cache APT et forcer la mise à jour
+  shell: |
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+    apt-get update || true
+  become: yes
+
+# Préparation
 - name: Recréer le dossier keyrings
   file:
     path: /etc/apt/keyrings
@@ -40,38 +47,28 @@
     update_cache: yes
   become: yes
 
-- name: Télécharger la clé GPG officielle Docker
-  ansible.builtin.get_url:
-    url: https://download.docker.com/linux/ubuntu/gpg
-    dest: /etc/apt/keyrings/docker.gpg
-    mode: '0644'
+# Ajout clé et dépôt Docker
+- name: Ajouter la clé GPG officielle Docker
+  shell: |
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+  args:
+    creates: /etc/apt/keyrings/docker.gpg
   become: yes
 
 - name: Ajouter le dépôt Docker stable
   apt_repository:
     repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
-    filename: docker
     state: present
+    filename: docker
   become: yes
 
-- name: Mettre à jour la liste des paquets
-  apt:
-    update_cache: yes
-  become: yes
-
-- name: Installer Docker CE, CLI, containerd et docker-compose-plugin
+# Installation app 
+- name: Installer dépendances de l'application
   apt:
     name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-compose-plugin
+      - git
+      - python3-pip
     state: present
-  become: yes
-
-- name: S’assurer que Docker est démarré et activé
-  service:
-    name: docker
-    state: started
-    enabled: yes
+    update_cache: yes
   become: yes
