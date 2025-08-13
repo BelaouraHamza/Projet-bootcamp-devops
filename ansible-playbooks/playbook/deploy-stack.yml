@@ -1,5 +1,5 @@
 ---
-- name: Déployer l'application complète (Docker + Configuration)
+- name: Déployer l’application complète (Docker + Configuration)
   hosts: all
   become: yes
 
@@ -10,7 +10,12 @@
     pgadmin_url: "http://35.180.251.100:80"
 
   tasks:
-  
+    #- name: Installer Docker si nécessaire
+     # apt:
+      #  name: docker.io
+      #  state: present
+      #  update_cache: yes
+
     - name: S’assurer que Docker est démarré et activé
       service:
         name: docker
@@ -19,7 +24,7 @@
 
     - name: Pull de la dernière image Docker depuis GHCR
       docker_image:
-        name: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') | lower}}/ic-webapp
+        name: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') }}/ic-webapp
         tag: latest
         source: pull
 
@@ -33,7 +38,7 @@
     - name: Lancer le container Docker
       docker_container:
         name: monapp
-        image: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') }}/ic-webapp:latest
+        image: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') | lower }}/ic-webapp:latest
         state: started
         restart_policy: always
         ports:
