@@ -24,7 +24,7 @@
 
     - name: Pull de la dernière image Docker depuis GHCR
       docker_image:
-        name: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') }}/ic-webapp
+        name: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') | lower}}/ic-webapp
         tag: latest
         source: pull
 
