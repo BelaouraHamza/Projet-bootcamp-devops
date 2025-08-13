@@ -10,12 +10,7 @@
     pgadmin_url: "http://35.180.251.100:80"
 
   tasks:
-    - name: Installer Docker si nécessaire
-      apt:
-        name: docker.io
-        state: present
-        update_cache: yes
-
+  
     - name: S’assurer que Docker est démarré et activé
       service:
         name: docker
